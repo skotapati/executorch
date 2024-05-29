@@ -1,0 +1,152 @@
+name: pull_mps
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'workflow_dispatch' }}-${{ github.event_name == 'schedule' }}
+  cancel-in-progress: true
+
+jobs:
+  gather-models-mps:
+    runs-on: macos-executorch
+    outputs:
+      models: ${{ steps.gather-models-mps.outputs.models }}
+      mps_models: ${{ steps.gather-models-mps.outputs.mps_models }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: 'recursive'
+      - name: Extract the list of models to test
+        id: gather-models-mps
+        run: |
+          set -eux
+
+          # Conda setup
+          if conda info --envs | grep -w -q "env-${{ runner.name }}"; then echo "env-${{ runner.name }} already exists"; else conda create -y -n "env-${{ runner.name }}" python=3.10; fi
+          CONDA_ENV="~/miniconda3/envs/env-${{ runner.name }}"
+          if [[ -n "$CONDA_ENV" ]]; then
+          # Use binaries under conda environment
+          export PATH="$CONDA_ENV/bin":$PATH
+          fi
+
+          conda init zsh
+          conda init
+          source ~/miniconda3/bin/activate
+          conda deactivate
+          conda activate "$CONDA_ENV"
+          conda install -y cmake
+
+          source .ci/scripts/utils.sh
+          # This is a simple Python script but as it tries to import executorch.examples.models,
+          # it requires a whole bunch of ExecuTorch dependencies on the Docker image
+          PYTHON_EXECUTABLE=python3 bash install_requirements.sh
+          # Discover all the tests from test_mps.py
+          python -m unittest backends.apple.mps.test.test_mps -k test_mps_backend_mm -q &>/dev/null
+
+          PYTHONPATH="${PWD}" python -m backends.apple.mps.ci.scripts.gather_test_models_mps
+#   test-mps-models:
+#     name: test-mps-models
+#     runs-on: macos-executorch
+#     needs: gather-models-mps
+#     strategy:
+#       matrix: ${{ fromJSON(needs.gather-models-mps.outputs.models) }}
+#       fail-fast: false
+#     steps:
+#       - uses: actions/checkout@v4
+#         with:
+#             submodules: 'recursive'
+#       - name: Run test ${{ matrix.test }}
+#         if: always()
+#         run: |
+#           set -eux
+
+#           # Conda setup
+#           if conda info --envs | grep -w -q "env-${{ runner.name }}"; then echo "env-${{ runner.name }} already exists"; else conda create -y -n "env-${{ runner.name }}" python=3.10; fi
+#           CONDA_ENV="~/miniconda3/envs/env-${{ runner.name }}"
+#           PYTHON_PATH="$CONDA_ENV/bin/python3"
+#           if [[ -n "$CONDA_ENV" ]]; then
+#           # Use binaries under conda environment
+#           export PATH="$CONDA_ENV/bin":$PATH
+#           fi
+
+#           conda init zsh
+#           conda init
+#           source ~/miniconda3/bin/activate
+#           conda deactivate
+#           conda activate "$CONDA_ENV"
+
+#           # Print out some information about the test environment
+#           which conda
+#           conda --version
+#           which python3
+#           python3 --version
+#           which python
+#           python --version
+
+#           source .ci/scripts/utils.sh
+#           conda install -y cmake
+
+#           WORKSPACE=$(pwd)
+#           pushd "${WORKSPACE}"
+#           MODEL_NAME=${{ matrix.model }}
+#           BUILD_TOOL=${{ matrix.build-tool }}
+
+#           # Setup MacOS dependencies as there is no Docker support on MacOS atm
+#           PYTHON_EXECUTABLE=python3 bash install_requirements.sh --pybind mps
+#           # Build and test ExecuTorch
+#           PYTHON_EXECUTABLE=python3 bash backends/apple/mps/ci/scripts/test-mps.sh "${MODEL_NAME}" "${BUILD_TOOL}" false
+#           popd
+  test-mps:
+    name: test-mps
+    runs-on: macos-executorch
+    needs: gather-models-mps
+    strategy:
+      matrix: ${{ fromJSON(needs.gather-models-mps.outputs.mps_models) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: 'recursive'
+      - name: Run test ${{ matrix.test }}
+        if: always()
+        run: |
+          set -eux
+
+          # Conda setup
+          if conda info --envs | grep -w -q "env-${{ runner.name }}"; then echo "env-${{ runner.name }} already exists"; else conda create -y -n "env-${{ runner.name }}" python=3.10; fi
+          CONDA_ENV="~/miniconda3/envs/env-${{ runner.name }}"
+          PYTHON_PATH="$CONDA_ENV/bin/python3"
+          if [[ -n "$CONDA_ENV" ]]; then
+          # Use binaries under conda environment
+          export PATH="$CONDA_ENV/bin":$PATH
+          fi
+
+          conda init zsh
+          conda init
+          source ~/miniconda3/bin/activate
+          conda deactivate
+          conda activate "$CONDA_ENV"
+
+          # Print out some information about the test environment
+          which conda
+          conda --version
+          which python3
+          python3 --version
+          which python
+          python --version
+
+          source .ci/scripts/utils.sh
+          conda install -y cmake
+          PYTHON_EXECUTABLE=python3 bash install_requirements.sh --pybind mps
+
+          MODEL_NAME=${{ matrix.model }}
+          BUILD_TOOL=${{ matrix.build-tool }}
+          # Setup MacOS dependencies as there is no Docker support on MacOS atm
+          PYTHON_EXECUTABLE=python3 bash backends/apple/mps/install_requirements.sh
+          # Build and test ExecuTorch
+          python3 -m unittest "${MODEL_NAME}"

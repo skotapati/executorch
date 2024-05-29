@@ -22,7 +22,6 @@ from executorch.exir.backend.backend_api import to_backend
 from executorch.exir.backend.backend_details import CompileSpec
 from executorch.exir.capture._config import ExecutorchBackendConfig
 from executorch.exir.tracer import Value
-from executorch.extension.pytree import tree_flatten
 from executorch.sdk import BundledProgram
 from executorch.sdk.bundled_program.config import MethodTestCase, MethodTestSuite
 from executorch.sdk.bundled_program.serialize import (
