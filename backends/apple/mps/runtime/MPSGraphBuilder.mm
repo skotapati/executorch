@@ -95,6 +95,8 @@ MPSGraphBuilder::compileMPSGraph() {
     [_targetTensors addObject: _idToMPSGraphTensor[out_id]];
   }
 
+  [_mpsGraph dump];
+
   return err;
 }
 

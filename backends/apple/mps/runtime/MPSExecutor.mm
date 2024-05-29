@@ -62,7 +62,12 @@ MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<
 }
 
 __ET_NODISCARD Error MPSExecutor::forward(std::vector<const Tensor*>& outputs) {
+  static bool printed = false;
   Error err = Error::Ok;
+  if (!printed) {
+    [_executable dump];
+    printed = true;
+  }
   MPSStream* mpsStream = getDefaultMPSStream();
   if (mpsStream->commitAndContinueEnabled() || mpsStream->hasLiveCommandBuffer()) {
     id<MTLCommandBuffer> commandBuffer = mpsStream->commandBuffer();

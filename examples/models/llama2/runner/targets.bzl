@@ -32,6 +32,7 @@ def define_common_targets():
                 "@EXECUTORCH_CLIENTS",
             ],
             exported_deps = [
+                "//executorch/backends/apple/mps:mps",
                 "//executorch/backends/xnnpack:xnnpack_backend",
                 "//executorch/examples/models/llama2/sampler:sampler" + aten_suffix,
                 "//executorch/extension/evalue_util:print_evalue" + aten_suffix,

@@ -25,6 +25,7 @@ from executorch.backends.apple.mps.serialization.mps_graph_serialize import (
     convert_to_flatbuffer,
 )
 from executorch.backends.apple.mps.utils.mps_utils import is_parameter
+from executorch.backends.apple.mps.utils.quant_utils import is_quant, is_dequant
 
 from executorch.exir.backend.backend_details import (
     BackendDetails,
@@ -34,8 +35,7 @@ from executorch.exir.backend.backend_details import (
 from torch._export.exported_program import ExportedProgram
 
 FORMAT = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s"
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 @final
 class MPSBackend(BackendDetails):
@@ -69,6 +69,19 @@ class MPSBackend(BackendDetails):
             graph_type=OpType.mps_graph,
         )
 
+        # passes = []
+        # for spec in compile_specs:
+        #     # if spec.key == "dqlinear_partitioner":
+        #         passes.append(ConvertToLinearPass)
+        #         # passes.append(TagImplicitQDqPass)
+
+        # passes = passes if len(passes) > 0 else None
+        # # XNNPACK Delegate Specific Passes
+        # ep = MPSPassManager(ep, passes=passes).transform()
+        # graph_module = ep.graph_module
+
+        # node_to_external_map = generate_node_to_external_map(ep, graph_module)
+
         convert_model_to_fp16 = True
         for spec in compile_specs:
             if spec.key == "use_fp16":
@@ -77,8 +90,8 @@ class MPSBackend(BackendDetails):
         logging.debug(f"Convert model to FP16: {convert_model_to_fp16}")
 
         node_visitors = get_node_visitors(edge_program, convert_model_to_fp16)
-        if logging.DEBUG >= logging.root.level:
-            edge_program.graph.print_tabular()
+        # if logging.DEBUG >= logging.root.level:
+        edge_program.graph.print_tabular()
 
         process_placeholder_nodes(
             edge_program,
@@ -100,8 +113,8 @@ class MPSBackend(BackendDetails):
             else:
                 op_handler[node.op](edge_program, node_visitors, node, mps_graph)
 
-        if logging.DEBUG >= logging.root.level:
-            pretty_print(mps_graph)
+        # if logging.DEBUG >= logging.root.level:
+        pretty_print(mps_graph)
 
         return PreprocessResult(processed_bytes=convert_to_flatbuffer(mps_graph))
 
@@ -138,10 +151,21 @@ class MPSBackend(BackendDetails):
         node: torch.fx.Node,
         mps_graph: MPSGraph,
     ) -> None:
-        # Handle only constants. Placeholders have already
-        # been visited in `process_input_placeholders`
-        if is_parameter(edge_program, node):
-            node_visitors[node.op].define_tensor(node, mps_graph)
+        None
+        # # Handle only constants. Placeholders have already
+        # # been visited in `process_input_placeholders`
+        # logging.info("Placeholder node:")
+        # logging.info(" node.users:")
+        # logging.info(f"   {node.users}")
+        # logging.info(" input nodes:")
+        # logging.info(f"   {node.all_input_nodes}")
+        # logging.info(" node target:")
+        # logging.info(f"   {node.target}")
+        # logging.info(f"  is quant: {is_quant(node)}, is dequant: {is_dequant(node)}")
+        # logging.info(f" node args: ")
+        # logging.info(f"   {node.args}")
+        # if is_parameter(edge_program, node):
+        #     node_visitors[node.op].define_tensor(node, mps_graph)
 
     @staticmethod
     def handle_output(

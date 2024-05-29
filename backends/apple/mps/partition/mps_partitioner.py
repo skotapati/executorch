@@ -46,7 +46,7 @@ class MPSOperatorSupport(OperatorSupportBase):
             return False
 
         if node.target.__name__ not in self.node_visitors:
-            logging.debug(f"[UNSUPPORTED] Node {node.target.__name__} not supported")
+            print(f"[UNSUPPORTED] Node {node.target.__name__} not supported")
             return False
 
         return True

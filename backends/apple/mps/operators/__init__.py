@@ -32,8 +32,11 @@ from . import (  # noqa
     reduce_ops,
     # Shape ops
     shape_ops,
-    # unary ops
-    unary_ops,
+    # Unary ops
+    unary_ops
+    # Quant-Dequant ops,
+    op_quant_dequant,
+
 )
 
 __all__ = [
@@ -41,8 +44,6 @@ __all__ = [
     op_clone,
     # Binary ops
     binary_ops,
-    # Unary ops
-    unary_ops,
     # Activation ops
     activation_ops,
     # Linear algebra ops
@@ -67,4 +68,8 @@ __all__ = [
     pad_ops,
     # Range ops
     range_ops,
+    # Unary ops
+    unary_ops,
+    # Quant-Dequant ops
+    op_quant_dequant,
 ]

@@ -154,6 +154,9 @@ private:
   _DEFINE_MPS_OP(ConstantPadND);
   // Range ops
   _DEFINE_MPS_OP(Arange);
+  // Quant-Dequant ops
+  _DEFINE_MPS_OP(DequantizePerChannelGroup);
+
 
   // Helper functions
   Error addNodeToMPSGraph(NodePtr nodePtr);

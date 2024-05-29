@@ -33,6 +33,10 @@ from executorch.exir.sym_util import eval_shape
 
 from torch.export.exported_program import ExportedProgram
 
+from executorch.backends.apple.mps.utils.quant_utils import is_quant, is_dequant
+
+FORMAT = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s"
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 class NodeVisitor:
     """
@@ -72,6 +76,7 @@ class NodeVisitor:
         self,
         node: torch.fx.Node,
         mps_graph: MPSGraph,
+        mps_data_type: MPSDataType = None,
     ) -> int:
         """Defines a tensor value into the MPSGraph serialization schema
 
@@ -89,7 +94,7 @@ class NodeVisitor:
         # Get a unique id for the node.
         id = self.get_serialized_id(node, mps_graph)
         cb_size, constant_buffer, mps_data_type = self.get_serialized_buffer(
-            node, mps_graph, id
+            node, mps_graph, id, mps_data_type
         )
         dims = get_shape(node)
 
@@ -214,6 +219,7 @@ class NodeVisitor:
         node: torch.fx.Node,
         mps_graph: MPSGraph,
         node_id: int,
+        mps_data_type: MPSDataType = None
     ) -> Tuple[int, Buffer, MPSDataType]:
         """
         If tensor holds some constant data, serialize it and return the
@@ -226,7 +232,7 @@ class NodeVisitor:
         Returns:
             _type_: _description_
         """
-        mps_data_type = self.get_serialized_dtype(node)
+        mps_data_type = self.get_serialized_dtype(node) if mps_data_type is None else mps_data_type
 
         # Check if this node is a lifted parameter
         if not is_parameter(self.exported_program, node):
@@ -255,11 +261,38 @@ class NodeVisitor:
         if id not in mps_graph.constant_ids:
             mps_graph.constant_ids.append(id)
 
+        print(f"Constant tensor: {mps_data_type}")
+        print(tensor.shape)
+        print(tensor.numel())
+        print(tensor.nbytes)
+        print(tensor.dtype)
+        print(tensor)
+
+        if mps_data_type is MPSDataType.mps_data_type_int4 and tensor.dtype is torch.int8:
+            # if tensor.dtype is not torch.int8:
+            #     raise RuntimeError(f"Group-wise quantization: expected data type of quantized tensor to be torch.int8 (one element for each byte). Found data type {tensor.dtype}")
+            # pack all 8 byte values into 4 byte
+            tensor_view = tensor.reshape(-1)
+            i4_out_tensor = torch.zeros(tensor_view.numel() // 2, dtype=torch.int8)
+            # this packing is quite slow
+            # MPS TODO:
+            # - Move tensor to "mps" device
+            # - Replace it with torch.weight_to_int4pack as it does the same thing on the GPU
+            for i in range(0, tensor_view.numel() // 2):
+                val0 = tensor_view[i * 2 + 0]
+                val1 = tensor_view[i * 2 + 1]
+                i4_out_tensor[i] = (((val1 & 0x0F) << 4)) | (val0 & 0x0F)
+            tensor = i4_out_tensor
+
         array_type = ctypes.c_char * tensor.untyped_storage().nbytes()
         array = ctypes.cast(
             tensor.untyped_storage().data_ptr(),
             ctypes.POINTER(array_type),
         ).contents
+        print("array contents")
+        print(array[0])
+        # print(array)
+        # print(bytes(array))
         buffer = Buffer(storage=bytes(array))
 
         return tensor.untyped_storage().nbytes(), buffer, mps_data_type
@@ -286,11 +319,17 @@ class NodeVisitor:
 
         return id
 
+    def torch_dtype_to_mps_dtype(
+        self,
+        torch_dtype: torch.dtype
+    ) -> MPSDataType:
+        return edge_dtype_to_mps_dtype(torch_dtype)
+
     def get_serialized_dtype(
         self,
         node: torch.fx.Node,
     ) -> MPSDataType:
-        return edge_dtype_to_mps_dtype(node.meta["val"].dtype)
+        return self.torch_dtype_to_mps_dtype(node.meta["val"].dtype)
 
     def create_tertiary_node(
         self, node: torch.fx.Node, mps_graph: MPSGraph, tertiary_op: MPSNodeUnion

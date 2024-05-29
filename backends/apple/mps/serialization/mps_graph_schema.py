@@ -17,14 +17,25 @@ class MPSDataType(IntEnum):
     mps_data_type_float16 = 1
     mps_data_type_float32 = 2
     mps_data_type_bfloat16 = 3
-    mps_data_type_int8 = 4
-    mps_data_type_int16 = 5
-    mps_data_type_int32 = 6
-    mps_data_type_int64 = 7
-    mps_data_type_uint8 = 8
-    mps_data_type_bool = 9
-    mps_data_type_complex_float16 = 10
-    mps_data_type_complex_float32 = 11
+
+    # Signed integers.
+    mps_data_type_int4 = 4
+    mps_data_type_int8 = 5
+    mps_data_type_int16 = 6
+    mps_data_type_int32 = 7
+    mps_data_type_int64 = 8
+
+    # Unsigned integers. range: [0, UTYPE_MAX]
+    mps_data_type_uint4 = 9
+    mps_data_type_uint8 = 10
+    mps_data_type_uint16 = 11
+    mps_data_type_uint32 = 12
+    mps_data_type_uint64 = 13
+
+    mps_data_type_bool = 14
+
+    mps_data_type_complex_float16 = 15
+    mps_data_type_complex_float32 = 16
 
 
 class OpType(IntEnum):
@@ -57,6 +68,11 @@ class MPSNode3x1:
     input3_id: int
     output_id: int
 
+
+@dataclass
+class MPSDequantizeNode(MPSNode1x1):
+    scales_id: int
+    zero_points_id: int
 
 @dataclass
 class MPSConv(MPSNode3x1):
@@ -639,6 +655,16 @@ class MPSArange:
     step: float
     dtype: MPSDataType
 
+##
+## Quant - Dequant ops
+##
+@dataclass
+class MPSDequantizePerChannelGroup(MPSDequantizeNode):
+    quant_min: int
+    quant_max: int
+    dtype: MPSDataType
+    group_size: int
+    output_dtype: MPSDataType
 
 MPSNodeUnion = Union[
     # Activation ops
@@ -743,6 +769,8 @@ MPSNodeUnion = Union[
     MPSConstantPadND,
     # Range ops
     MPSArange,
+    # Quant-Dequant ops
+    MPSDequantizePerChannelGroup,
 ]
 
 

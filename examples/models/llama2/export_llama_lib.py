@@ -57,7 +57,7 @@ from .source_transformation.sdpa import (
 
 IS_FBCODE = True  #  os.environ.get("FBCODE_PLATFORM", False)
 FORMAT = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s"
-logging.basicConfig(level=logging.INFO, format=FORMAT)
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 pkg_name = __name__
 verbosity_setting = None

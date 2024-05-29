@@ -28,6 +28,8 @@ MPSGraphBuilder::getMPSDataType(DataType serializedDataType) {
       return MPSDataTypeFloat16;
     case DataType::mps_data_type_float32:
       return MPSDataTypeFloat32;
+    case DataType::mps_data_type_int4:
+      return MPSDataTypeInt4;
     case DataType::mps_data_type_int8:
       return MPSDataTypeInt8;
     case DataType::mps_data_type_int16:
@@ -216,6 +218,8 @@ MPSGraphBuilder::addNodeToMPSGraph(NodePtr nodePtr) {
     _DEFINE_MPS_NODE(ConstantPadND);
     // Range ops
     _DEFINE_MPS_NODE(Arange);
+    // Quant-Dequant ops
+    _DEFINE_MPS_NODE(DequantizePerChannelGroup);
 
     case mpsgraph::MPSNodeUnion::NONE:
     default:
@@ -313,7 +317,7 @@ void* pageAlignedBlockPtr(const void* ptr, NSUInteger size, NSUInteger* alignedB
 
 
 MPSGraphTensor* permuteTensor(MPSGraph* graph, MPSGraphTensor* inputTensor, NSArray* permuteOrder) {
-  if (isMacOS13OrNewer()) {
+  if (false) {
    return [graph transposeTensor:inputTensor
                      permutation:permuteOrder
                             name:nil];
