@@ -272,18 +272,25 @@ class NodeVisitor:
             # if tensor.dtype is not torch.int8:
             #     raise RuntimeError(f"Group-wise quantization: expected data type of quantized tensor to be torch.int8 (one element for each byte). Found data type {tensor.dtype}")
             # pack all 8 byte values into 4 byte
-            tensor_view = tensor.reshape(-1)
-            i4_out_tensor = torch.zeros(tensor_view.numel() // 2, dtype=torch.int8)
-            # this packing is quite slow
-            # MPS TODO:
-            # - Move tensor to "mps" device
-            # - Replace it with torch.weight_to_int4pack as it does the same thing on the GPU
-            for i in range(0, tensor_view.numel() // 2):
-                val0 = tensor_view[i * 2 + 0]
-                val1 = tensor_view[i * 2 + 1]
-                i4_out_tensor[i] = (((val1 & 0x0F) << 4)) | (val0 & 0x0F)
-            tensor = i4_out_tensor
-
+            if tensor.dim() != 2:
+                raise RuntimeError(f"Unexpected tensor shape {tensor.shape}")
+            logging.debug(f"Packing int4 tensor {tensor.shape}")
+            logging.info(f"Packing int4 tensor {tensor.shape}")
+            # tensor_view = tensor.reshape(-1)
+            # i4_out_tensor = torch.zeros(tensor_view.numel() // 2, dtype=torch.int8)
+            # # # this packing is quite slow
+            # # # MPS TODO:
+            # # # - Move tensor to "mps" device
+            # # # - Replace it with torch.weight_to_int4pack as it does the same thing on the GPU
+            # for i in range(0, tensor_view.numel() // 2):
+            #     val0 = tensor_view[i * 2 + 0]
+            #     val1 = tensor_view[i * 2 + 1]
+            #     i4_out_tensor[i] = (((val1 & 0x0F) << 4)) | (val0 & 0x0F)
+            # tensor = i4_out_tensor
+            tensor = torch._convert_weight_to_int4pack(tensor.to(torch.int32).to("mps"), 2).cpu().view(dtype=torch.int8).reshape(-1)
+            # print("Checking if out tensors are equal...")
+            # torch.testing.assert_allclose(tensor, i4_out_tensor)
+            print("Tensors are equal!!")
         array_type = ctypes.c_char * tensor.untyped_storage().nbytes()
         array = ctypes.cast(
             tensor.untyped_storage().data_ptr(),
