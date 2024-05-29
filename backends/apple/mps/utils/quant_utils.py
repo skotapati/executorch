@@ -38,4 +38,4 @@ def is_dequant(tensor: torch.fx.Node) -> bool:
 
 
 def is_groupwise_q_dq(tensor: torch.fx.Node) -> bool:
-    return tensor.target in [DQ_TARGETS, Q_TARGETS]
+    return tensor.target in [DQ_GROUP_TARGETS, Q_GROUP_TARGETS]
