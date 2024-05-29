@@ -33,7 +33,7 @@ from . import (  # noqa
     # Shape ops
     shape_ops,
     # Unary ops
-    unary_ops
+    unary_ops,
     # Quant-Dequant ops,
     op_quant_dequant,
 

@@ -164,21 +164,21 @@ class XnnpackBackend(BackendDetails):
             else:
                 raise RuntimeError(f"{node.op} is not supported in XNNPACK")
 
-        logging.info("Serialized XNNGraph:")
-        logging.info(f" Version: {xnnpack_graph.version}")
-        logging.info(" XNN nodes: ")
-        for i in range(len(xnnpack_graph.xnodes)):
-            logging.info(f"   [{i}]: {xnnpack_graph.xnodes[i]}")
-        logging.info(" XNN values: ")
-        for i in range(len(xnnpack_graph.xvalues)):
-            logging.info(f"   [{i}]: {xnnpack_graph.xvalues[i]}")
-        logging.info(" Input ids:")
-        for input_ids in xnnpack_graph.input_ids:
-            logging.info(f"   {input_ids}")
-        logging.info(" Output ids:")
-        for out_id in xnnpack_graph.output_ids:
-            logging.info(f"   {out_id}")
-        logging.info(f" Num externs: {xnnpack_graph.num_externs}")
+        # logging.info("Serialized XNNGraph:")
+        # logging.info(f" Version: {xnnpack_graph.version}")
+        # logging.info(" XNN nodes: ")
+        # for i in range(len(xnnpack_graph.xnodes)):
+        #     logging.info(f"   [{i}]: {xnnpack_graph.xnodes[i]}")
+        # logging.info(" XNN values: ")
+        # for i in range(len(xnnpack_graph.xvalues)):
+        #     logging.info(f"   [{i}]: {xnnpack_graph.xvalues[i]}")
+        # logging.info(" Input ids:")
+        # for input_ids in xnnpack_graph.input_ids:
+        #     logging.info(f"   {input_ids}")
+        # logging.info(" Output ids:")
+        # for out_id in xnnpack_graph.output_ids:
+        #     logging.info(f"   {out_id}")
+        # logging.info(f" Num externs: {xnnpack_graph.num_externs}")
 
         return PreprocessResult(
             processed_bytes=serialize_xnnpack_binary(
