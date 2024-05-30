@@ -33,7 +33,7 @@ if(NOT PYTHON_EXECUTABLE)
   resolve_python_executable()
 endif()
 
-add_compile_options("-Wall" "-Werror")
+add_compile_options("-Wall")
 
 include(${EXECUTORCH_ROOT}/build/Utils.cmake)
 

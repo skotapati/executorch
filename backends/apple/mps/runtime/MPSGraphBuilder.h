@@ -187,6 +187,10 @@ private:
   MPSGraphExecutable *_mpsGraphExecutable;
   NSMutableDictionary<MPSGraphTensor *, MPSGraphShapedType *> *_feeds;
   NSMutableArray<MPSGraphTensor *> *_targetTensors;
+
+  uint64_t data_segment_offset;
+  uint64_t data_segment_size;
+  uint8_t* constant_data_ptr;
 };
 
 #undef _DEFINE_MPS_OP

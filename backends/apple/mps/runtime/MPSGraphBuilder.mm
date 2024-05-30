@@ -5,6 +5,12 @@
 
 #include <executorch/backends/apple/mps/runtime/MPSGraphBuilder.h>
 #include <executorch/backends/apple/mps/runtime/MPSDevice.h>
+#include <iostream>
+
+
+@interface MPSGraph()
+-(void)dump;
+@end
 
 namespace torch {
 namespace executor {
@@ -24,15 +30,35 @@ Error
 MPSGraphBuilder::compileModel() {
   Error err = Error::Ok;
 
-  ET_CHECK(_buffer_pointer != nullptr);
+  // uint8_t* flatbuffer_start = (uint8_t*)_buffer_pointer + 4 + 4 + 8 + 8;
+  uint8_t* flatbuffer_start = (uint8_t*)_buffer_pointer;
+  uint32_t start = *((uint32_t*)flatbuffer_start);
+  flatbuffer_start = flatbuffer_start + 4;
+  ET_CHECK(start == 0);
+  ET_CHECK((char)flatbuffer_start[0] == 'M');
+  ET_CHECK((char)flatbuffer_start[1] == 'P');
+  ET_CHECK((char)flatbuffer_start[2] == '0');
+  ET_CHECK((char)flatbuffer_start[3] == '1');
+  // ET_CHECK(flatbuffers::BufferHasIdentifier(flatbuffer_start, fbIdentifier));
+  flatbuffer_start = flatbuffer_start + 4;
+  data_segment_offset = *((uint64_t*)flatbuffer_start);
+  flatbuffer_start = flatbuffer_start + 8;
+  data_segment_size = *((uint64_t*)flatbuffer_start);
+  flatbuffer_start = flatbuffer_start + 8;
+  std::cout << "data_segment_offset = " << data_segment_offset << std::endl;
+  std::cout << "data_segment_size = " << data_segment_size << std::endl;
+
+  constant_data_ptr = (uint8_t*)_buffer_pointer + data_segment_offset;
+
+  ET_CHECK(flatbuffer_start != nullptr);
   ET_CHECK_OR_RETURN_ERROR(
-    mpsgraph::MPSGraphBufferHasIdentifier(_buffer_pointer),
+    mpsgraph::MPSGraphBufferHasIdentifier(flatbuffer_start),
     DelegateInvalidCompatibility,
     "MPS Delegate Serialization Format version identifier '%.4s' != expected '%.4s'",
-    flatbuffers::GetBufferIdentifier(_buffer_pointer),
+    flatbuffers::GetBufferIdentifier(flatbuffer_start),
     mpsgraph::MPSGraphIdentifier());
 
-  _flatBufferGraph = mpsgraph::GetMPSGraph(_buffer_pointer);
+  _flatBufferGraph = mpsgraph::GetMPSGraph(flatbuffer_start);
   switch (_flatBufferGraph->graph_type()) {
     case mpsgraph::OpType::metal_kernel:
     {
@@ -61,6 +87,9 @@ MPSGraphBuilder::compileMPSGraph() {
   Error err = Error::Ok;
 
   _idToMPSGraphTensor.resize(_flatBufferGraph->mps_values()->size(), nullptr);
+  // std::cout << "Constant segment size: " <<   _flatBufferGraph->constant_segment()->size() << std::endl;
+  // std::cout << "Constant segment offset: " <<   _flatBufferGraph->constant_segment()->offset() << std::endl;
+  std::cout << "sizeof: " << sizeof(*_flatBufferGraph) << " " << sizeof(_flatBufferGraph) << " " <<  std::endl;
   // Add the placeholder nodes to the graph.
   for (auto in_id : *_flatBufferGraph->input_ids()) {
     err = mpsGraphRankedPlaceholder(in_id);

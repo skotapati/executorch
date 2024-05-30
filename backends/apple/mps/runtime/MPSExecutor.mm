@@ -41,15 +41,20 @@ __ET_NODISCARD Error
 MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<const Tensor*>& outputs) {
   ET_CHECK_OR_RETURN_ERROR(inputs.size() == getNumInputs(), Internal, "Inputs mismatch");
   ET_CHECK_OR_RETURN_ERROR(outputs.size() == getNumOutputs(), Internal, "Outputs mismatch");
-  // updateDataBuffers is a no-op for devices with shared memory.
-  // In case of devices with non-shared memory, it will blit the contents to a private GPU buffer.
+  // updateDataBuffers is a noop for devices with shared memory, it just gets the buffer GPU address
+  // in case of devices with non-shared memory, it will blit the contents to a private GPU buffer.
   updateDataBuffers(inputs, outputs);
+  _inputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc] init];
+  _outputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc] init];
+  if (!_inputsArray || [_inputsArray count] == 0) {
+    // printf("initialize inputs array...?\n");
   for (MPSGraphTensor *tensor in [_executable feedTensors]) {
     int i = _mpsGraphTensorToId[tensor];
     MPSGraphTensorData* tensorData = [[[MPSGraphTensorData alloc]initWithMTLBuffer:_inputGPUBuffers[i]
                                                                             shape:[_inputShapes[i] shape]
                                                                           dataType:[_inputShapes[i] dataType]] autorelease];
     _inputsArray[i] = tensorData;
+  }
   }
 
   for (int i = 0; i < outputs.size(); i++) {
@@ -58,6 +63,7 @@ MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<
                                                                           dataType:[_outputShapes[i] dataType]] autorelease];
     _outputsArray[i] = tensorData;
   }
+
   return Error::Ok;
 }
 

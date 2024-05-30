@@ -2,9 +2,10 @@
 #  Copyright (c) 2023 Apple Inc. All rights reserved.
 #  Provided subject to the LICENSE file in the top level directory.
 #
-
+from typing import ClassVar
 import logging
-from typing import Dict, final, List
+from typing import Dict, Tuple, final, List
+from executorch.exir._serialize._program import Cord, _ExtendedHeader
 
 import torch
 
@@ -19,6 +20,7 @@ from executorch.backends.apple.mps.serialization.mps_graph_schema import (
     MPSGraph,
     MPSTensor,
     OpType,
+    DataSegment,
 )
 
 from executorch.backends.apple.mps.serialization.mps_graph_serialize import (
@@ -34,11 +36,21 @@ from executorch.exir.backend.backend_details import (
 )
 from torch._export.exported_program import ExportedProgram
 
+from backends.apple.mps.serialization.mps_graph_schema import Buffer
+
 FORMAT = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 @final
 class MPSBackend(BackendDetails):
+
+    MAGIC_IX: ClassVar[slice] = slice(4, 8)
+    DATA_SEGMENT_OFFSET_IX: ClassVar[slice] = slice(8, 16)
+    DATA_SEGMENT_SIZE_IX: ClassVar[slice] = slice(16, 24)
+
+    # magic bytes that should be at the beginning of the header
+    EXPECTED_MAGIC: ClassVar[bytes] = b"MP01"
+
     @staticmethod
     def preprocess(
         edge_program: ExportedProgram,
@@ -67,6 +79,7 @@ class MPSBackend(BackendDetails):
             output_ids=[],
             constant_ids=[],
             graph_type=OpType.mps_graph,
+            constant_segment=DataSegment(0, 0),
         )
 
         # passes = []
@@ -113,10 +126,56 @@ class MPSBackend(BackendDetails):
             else:
                 op_handler[node.op](edge_program, node_visitors, node, mps_graph)
 
+        # return PreprocessResult(processed_bytes=convert_to_flatbuffer(mps_graph))
+
+        segment_data, mps_graph = _extract_constant_segment(mps_graph)
+        # Add to aggregate segments cord with padding.
+        padding_length = _padding_required(len(segment_data), 16)
+        if padding_length > 0:
+            segment_data.append(b"\x00" * padding_length)
+
+        # Combine mps_graph with segment data
+        combined = Cord()
+
+
+        graph_bytes = convert_to_flatbuffer(mps_graph)
+
+        # MPS TODO:
+        # Create a struct to hold these values:
+        # Append at the beginning of the flattbuffer following:
+        # MAGIC; 4bytes; 0x
+        header_size : int = 4 + 4 + 8 + 8
+        data_segment_offset: int = header_size
+        data_segment_offset = data_segment_offset + len(graph_bytes)
+        # Pad the mps graph to 16 alignment (is this necessary?)
+        graph_padding_length = _padding_required(data_segment_offset, 16)
+        data_segment_offset = data_segment_offset + graph_padding_length
+        data_segment_size = len(segment_data)
+
+        print(f"data_segment_offset = {data_segment_offset}")
+        print(f"data_segment_size = {data_segment_size}")
+        data: bytes = (
+            b"\x00\x00\x00\x00" +
+            MPSBackend.EXPECTED_MAGIC +
+            data_segment_offset.to_bytes(8, byteorder="little") +
+            data_segment_size.to_bytes(8, byteorder="little")
+        )
+        assert(len(data) == header_size)
+
+        combined.append(data)
+        combined.append(graph_bytes)
+
+        # Pad the mps graph to 16 alignment (is this necessary?)
+        # graph_padding_length = _padding_required(len(combined), 16)
+        if graph_padding_length > 0:
+            combined.append(b"\x00" * graph_padding_length)
+        # Append the segment data to the end of the mps graph
+        combined.append(segment_data)
+
         # if logging.DEBUG >= logging.root.level:
         pretty_print(mps_graph)
 
-        return PreprocessResult(processed_bytes=convert_to_flatbuffer(mps_graph))
+        return PreprocessResult(processed_bytes=bytes(combined))
 
     @staticmethod
     def handle_call_function(
@@ -187,13 +246,41 @@ class MPSBackend(BackendDetails):
     ) -> None:
         pass
 
+def _padding_required(offset: int, alignment: int) -> int:
+    """Returns the padding required to align `offset` to `alignment`."""
+    remainder: int = offset % alignment
+    if remainder != 0:
+        return alignment - remainder
+    return 0
+
+
+def _extract_constant_segment(mps_graph: MPSGraph) -> Tuple[Cord, MPSGraph]:
+    """Extracts the constant segment from the MPSGraph and returns the updated MPSGraph along with the segment data."""
+    # Note that the beginning of the segment data is not aligned. Need to handle out of this call.
+    segment_data = Cord()
+    offset = 0
+    for i in range(len(mps_graph.mps_values)):
+        tensor = mps_graph.mps_values[i]
+        if tensor.constant_buffer_size > 0:
+            # Notice that buffer is already force aligned so we don't need to pad it
+            segment_data.append(tensor.constant_buffer.storage)
+
+            # Reset buffer to empty
+            tensor.constant_buffer = Buffer(storage=b"")
+            # Update segment offset
+            tensor.segment_offset = offset
+            offset += tensor.constant_buffer_size
+
+    return segment_data, mps_graph
 
 def tensor_to_str(mps_tensor: MPSTensor):
     tensor_str = "MPSTensor("
     tensor_str += "datatype=" + str(mps_tensor.datatype) + ", "
     tensor_str += "num_dims=" + str(mps_tensor.num_dims) + ", "
     tensor_str += "dims=" + str(mps_tensor.dims) + ", "
-    tensor_str += "constant_buffer_size=" + str(mps_tensor.constant_buffer_size)
+    tensor_str += "constant_buffer=" + str(mps_tensor.constant_buffer) + ", "
+    tensor_str += "constant_buffer_size=" + str(mps_tensor.constant_buffer_size) + ", "
+    tensor_str += "segment_offset=" + str(mps_tensor.segment_offset)
     tensor_str += ")"
 
     return tensor_str
@@ -217,3 +304,4 @@ def pretty_print(mps_graph: MPSGraph):
     logging.info(" Output ids:")
     for out_id in mps_graph.output_ids:
         logging.info(f"   {out_id}")
+    logging.info(f" Constant segment: {mps_graph.constant_segment}")

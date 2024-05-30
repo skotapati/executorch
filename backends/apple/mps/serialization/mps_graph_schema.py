@@ -791,8 +791,13 @@ class MPSTensor:
     num_dims: int
     dims: List[int]
     constant_buffer_size: int
-    constant_buffer: Buffer
+    constant_buffer: Buffer # deprecated
+    segment_offset: int = 0
 
+@dataclass
+class DataSegment:
+    offset: int
+    size: int
 
 @dataclass
 class MPSGraph:
@@ -803,3 +808,4 @@ class MPSGraph:
     output_ids: List[int]
     constant_ids: List[int]
     graph_type: OpType
+    constant_segment: DataSegment

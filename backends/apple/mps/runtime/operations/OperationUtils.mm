@@ -6,6 +6,7 @@
 
 #include <executorch/backends/apple/mps/runtime/MPSGraphBuilder.h>
 #include <numeric>
+// #include <iostream>
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
@@ -90,10 +91,13 @@ MPSGraphBuilder::numel(const flatbuffers::Vector<int32_t>* shape) {
 NSData*
 MPSGraphBuilder::getConstantData(int32_t id) {
   TensorPtr mpsTensor = _flatBufferGraph->mps_values()->Get(id);
-  int32_t constantBufferSize = mpsTensor->constant_buffer_size();
-  const unsigned char* constantBuffer = mpsTensor->constant_buffer()->storage()->data();
+  uint64_t constantBufferSize = mpsTensor->constant_buffer_size();
+  uint64_t segmentOffset = mpsTensor->segment_offset();
+  // std::cout << "constant buffer size: " << constantBufferSize << std::endl;
+  // std::cout << "segmentOffset buffer size: " << segmentOffset << std::endl;
+  const unsigned char* constantBuffer = constant_data_ptr + segmentOffset;
   ET_CHECK_MSG(constantBufferSize > 0 && constantBuffer != nullptr, "[ERROR] Invalid constant buffer");
-  return [[NSData alloc] initWithBytes:constantBuffer
+  return [[NSData alloc] initWithBytesNoCopy:(void*)constantBuffer
                                 length:constantBufferSize];
 }
 
