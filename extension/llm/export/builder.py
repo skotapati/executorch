@@ -219,7 +219,7 @@ class LLMEdgeManager:
                 edge_constant_methods=self.metadata,
                 edge_compile_config=edge_config,
                 verbose=self.verbose,
-                remove_func_pass=True
+                remove_func_pass=False,
             )
         return self
 

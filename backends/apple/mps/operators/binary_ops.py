@@ -126,6 +126,9 @@ class ComparasionOpVisitor(NodeVisitor):
         "aten.gt.Scalar",
         "aten.le.Scalar",
         "aten.lt.Scalar",
+        "lt",
+        # "le",
+        # "ge",
     ]
 
     def __init__(self, *args) -> None:
@@ -151,6 +154,40 @@ class ComparasionOpVisitor(NodeVisitor):
         mps_graph: MPSGraph,
     ) -> None:
 
-        mps_graph.mps_nodes.append(
-            self.create_binary_node(node, mps_graph, self.comparison_ops[node.target])
-        )
+        if node.target.__name__ is "lt":
+           print(">Here1")
+           mps_graph.mps_nodes.append(
+            self.create_binary_node(node, mps_graph, MPSLt))
+        elif node.target.__name__ is "le":
+            print(">Here2")
+            mps_graph.mps_nodes.append(
+                self.create_binary_node(node, mps_graph, MPSLe))
+        elif node.target.__name__ is "ge":
+            print(">Here3")
+            mps_graph.mps_nodes.append(
+                self.create_binary_node(node, mps_graph, MPSGe))
+        else:
+            mps_graph.mps_nodes.append(
+                self.create_binary_node(node, mps_graph, self.comparison_ops[node.target])
+            )
+
+
+# class OpSkipOps(NodeVisitor):
+#     """
+#     Parent Class for handling Skip Ops
+#     """
+
+#     def __init__(self, *args) -> None:
+#         super().__init__(*args)
+
+#     def define_node(
+#         self,
+#         node: torch.fx.Node,
+#         mps_graph: MPSGraph,
+#     ) -> None:
+#         return
+
+# @register_node_visitor
+# class OpSkip(OpSkipOps):
+#     target = [
+#         "lt", "ge", "_assert_async.msg", "_local_scalar_dense.default", "scalar_tensor.default", "le"]

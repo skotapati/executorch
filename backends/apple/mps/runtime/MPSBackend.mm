@@ -69,6 +69,7 @@ class MPSBackend final : public PyTorchBackendInterface {
     while ((input_pointers.size() != executor->getNumInputs()    ||
            output_pointers.size() != executor->getNumOutputs())  &&
            (i < total_placeholders)) {
+      if (args[i] == nullptr) continue;
       ET_CHECK_OR_RETURN_ERROR(
         args[i] != nullptr,
         Internal,

@@ -197,31 +197,33 @@ The Wikitext results generated above used: `{max_seq_len: 2048, limit: 1000}`
     cmake -DPYTHON_EXECUTABLE=python \
         -DCMAKE_INSTALL_PREFIX=cmake-out \
         -DEXECUTORCH_ENABLE_LOGGING=1 \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=Debug \
         -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
         -DEXECUTORCH_BUILD_EXTENSION_DATA_LOADER=ON \
         -DEXECUTORCH_BUILD_XNNPACK=ON \
+        -DEXECUTORCH_BUILD_MPS=ON \
         -DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON \
         -DEXECUTORCH_BUILD_KERNELS_OPTIMIZED=ON \
         -DEXECUTORCH_BUILD_KERNELS_CUSTOM=ON \
         -Bcmake-out .
 
-    cmake --build cmake-out -j16 --target install --config Release
+    cmake --build cmake-out -j16 --target install --config Debug
     ```
 
 2. Build llama runner.
     ```
     cmake -DPYTHON_EXECUTABLE=python \
         -DCMAKE_INSTALL_PREFIX=cmake-out \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=Debug \
         -DEXECUTORCH_BUILD_KERNELS_CUSTOM=ON \
         -DEXECUTORCH_BUILD_KERNELS_OPTIMIZED=ON \
         -DEXECUTORCH_BUILD_XNNPACK=ON \
+        -DEXECUTORCH_BUILD_MPS=ON \
         -DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON \
         -Bcmake-out/examples/models/llama2 \
         examples/models/llama2
 
-    cmake --build cmake-out/examples/models/llama2 -j16 --config Release
+    cmake --build cmake-out/examples/models/llama2 -j16 --config Debug
     ```
 
 For Llama3, add `-DEXECUTORCH_USE_TIKTOKEN=ON` option when building the llama runner.

@@ -10,6 +10,7 @@
 #import <Foundation/Foundation.h>
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 #import <MetalPerformanceShadersGraph/MetalPerformanceShadersGraph.h>
+#include <iostream>
 
 @interface MPSGraphExecutable()
 -(NSArray<MPSGraphShapedType *> *) getInputShapes;
@@ -17,6 +18,7 @@
 @end
 
 
+#define CAPTURE_MODEL  1
 namespace torch {
 namespace executor {
 namespace mps {
@@ -33,8 +35,8 @@ MPSExecutor::MPSExecutor() {
     _use_shared_mem = false;
   }
 
-  _inputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc]  initWithCapacity:getNumInputs()];
-  _outputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc] initWithCapacity:getNumOutputs()];
+  _inputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc]  initWithCapacity:getNumInputs()] autorelease];
+  _outputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] initWithCapacity:getNumOutputs()] autorelease];
 }
 
 __ET_NODISCARD Error
@@ -44,18 +46,22 @@ MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<
   // updateDataBuffers is a noop for devices with shared memory, it just gets the buffer GPU address
   // in case of devices with non-shared memory, it will blit the contents to a private GPU buffer.
   updateDataBuffers(inputs, outputs);
-  _inputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc] init];
-  _outputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc] init];
-  if (!_inputsArray || [_inputsArray count] == 0) {
+  _inputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] init] autorelease];
+  _outputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] init] autorelease];
+  // if (!_inputsArray || [_inputsArray count] == 0) {
     // printf("initialize inputs array...?\n");
+#if !CAPTURE_MODEL
+  for (int i = 0; i < inputs.size(); i++) {
+#else
   for (MPSGraphTensor *tensor in [_executable feedTensors]) {
     int i = _mpsGraphTensorToId[tensor];
+#endif
     MPSGraphTensorData* tensorData = [[[MPSGraphTensorData alloc]initWithMTLBuffer:_inputGPUBuffers[i]
                                                                             shape:[_inputShapes[i] shape]
                                                                           dataType:[_inputShapes[i] dataType]] autorelease];
     _inputsArray[i] = tensorData;
   }
-  }
+  // }
 
   for (int i = 0; i < outputs.size(); i++) {
     MPSGraphTensorData* tensorData = [[[MPSGraphTensorData alloc] initWithMTLBuffer:_outputGPUBuffers[i]
@@ -75,7 +81,7 @@ __ET_NODISCARD Error MPSExecutor::forward(std::vector<const Tensor*>& outputs) {
     printed = true;
   }
   MPSStream* mpsStream = getDefaultMPSStream();
-  if (mpsStream->commitAndContinueEnabled() || mpsStream->hasLiveCommandBuffer()) {
+  if (1) {
     id<MTLCommandBuffer> commandBuffer = mpsStream->commandBuffer();
     [_executable encodeToCommandBuffer:commandBuffer
                           inputsArray:_inputsArray
@@ -115,6 +121,9 @@ MPSExecutor::initDataBuffers() {
 
   int nInputs = getNumInputs();
   int nOutputs = getNumOutputs();
+
+  std::cout << "Num inputs: " << nInputs << std::endl;
+  std::cout << "Num outputs: " << nOutputs << std::endl;
 
   _inputGPUBuffers.resize(nInputs);
   _outputGPUBuffers.resize(nOutputs);

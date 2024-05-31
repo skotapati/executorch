@@ -1,4 +1,4 @@
-examples/models/llama2/builder.py //
+//
 //  Copyright (c) 2023 Apple Inc. All rights reserved.
 //  Provided subject to the LICENSE file in the top level directory.
 //
@@ -178,11 +178,17 @@ MPSGraphBuilder::getMPSGraphExecutable() {
   if (_mpsGraphExecutable) {
     return _mpsGraphExecutable;
   }
+
+  MPSGraphCompilationDescriptor *compilationDescriptor = [MPSGraphCompilationDescriptor new];
+  compilationDescriptor.optimizationLevel = MPSGraphOptimizationLevel0;
+
   _mpsGraphExecutable = [_mpsGraph compileWithDevice:[MPSGraphDevice deviceWithMTLDevice:MPSDevice::getInstance()->device()]
                                                feeds:_feeds
                                        targetTensors:_targetTensors
                                     targetOperations:nil
-                               compilationDescriptor:nil];
+                               compilationDescriptor:compilationDescriptor];
+
+
 
   return _mpsGraphExecutable;
 

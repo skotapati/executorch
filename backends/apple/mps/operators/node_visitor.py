@@ -148,6 +148,9 @@ class NodeVisitor:
             mps_graph.mps_values.append(mps_tensor)
         return self.tensor_to_id[node]
 
+    def hash_tensor(self, tensor):
+        return hash(tuple(tensor.reshape(-1).tolist()))
+
     def define_constant(
         self,
         constant_tensor: torch.tensor,
@@ -161,8 +164,17 @@ class NodeVisitor:
         """
         constant_tensor = constant_tensor.contiguous()
         # MPS TODO: cache these values
-        id = len(mps_graph.mps_values)
-        self.tensor_to_id[constant_tensor] = id
+
+        hash = self.hash_tensor(constant_tensor)
+        if hash in self.tensor_to_id:
+            print(">>> !!Found hash")
+            return self.tensor_to_id[hash]
+
+        # id = len(mps_graph.mps_values)
+        # self.tensor_to_id[constant_tensor] = id
+
+        id = self.get_serialized_id(constant_tensor, mps_graph, hash)
+
         mps_data_type = edge_dtype_to_mps_dtype(constant_tensor.dtype)
         constant_buffer_size, constant_buffer, mps_data_type = self.get_serialized_data(
             constant_tensor, mps_graph, mps_data_type, id
@@ -195,8 +207,13 @@ class NodeVisitor:
         assert isinstance(val, int) or isinstance(val, float)
 
         # MPS TODO: cache these values
-        id = len(mps_graph.mps_values)
-        self.tensor_to_id[val] = id
+        hash = self.hash_tensor(val)
+
+        if hash in self.tensor_to_id:
+            print(">>> !!Found hash")
+            return self.tensor_to_id[hash]
+
+        id = self.get_serialized_id(val, mps_graph, hash)
 
         tensor = torch.tensor(val)
         constant_buffer_size, constant_buffer, mps_data_type = self.get_serialized_data(
@@ -305,7 +322,10 @@ class NodeVisitor:
         return tensor.untyped_storage().nbytes(), buffer, mps_data_type
 
     def get_serialized_id(
-        self, node: Union[torch.fx.Node, float, int], mps_graph: MPSGraph
+        self,
+        node: Union[torch.fx.Node, float, int],
+        mps_graph: MPSGraph,
+        hash = None
     ) -> int:
         """
         Map a tensor to a unique id. If the tensor was already mapped, return
@@ -318,11 +338,16 @@ class NodeVisitor:
         Returns:
             int: _description_
         """
-        if node in self.tensor_to_id:
+        if hash != None and hash in self.tensor_to_id:
+            return self.tensor_to_id[hash]
+        elif node in self.tensor_to_id:
             return self.tensor_to_id[node]
 
         id = len(mps_graph.mps_values)
-        self.tensor_to_id[node] = id
+        if hash != None:
+            self.tensor_to_id[hash] = id
+        else:
+            self.tensor_to_id[node] = id
 
         return id
 

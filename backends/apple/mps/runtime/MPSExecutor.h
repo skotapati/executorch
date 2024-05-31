@@ -22,7 +22,7 @@ namespace mps {
 namespace delegate {
 
 class MPSExecutor {
- private:
+ public:
   MPSGraphExecutable* _executable;
   NSArray<MPSGraphShapedType *> * _inputShapes;
   NSArray<MPSGraphShapedType *> * _outputShapes;
