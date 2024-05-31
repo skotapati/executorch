@@ -1,4 +1,4 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
+ # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -45,13 +45,20 @@ def _to_core_aten(
         logging.info(f"Core ATen graph:\n{core_aten_ep.graph}")
     return core_aten_ep
 
+from torch.export._remove_auto_functionalized_pass import (
+    unsafe_remove_auto_functionalized_pass,
+)
 
 def _core_aten_to_edge(
     core_aten_exir_ep: ExportedProgram,
     edge_constant_methods: Optional[Dict[str, Any]] = None,
     edge_compile_config=None,
     verbose=True,
+    remove_func_pass=False
 ) -> EdgeProgramManager:
+    if remove_func_pass:
+        core_aten_exir_ep = unsafe_remove_auto_functionalized_pass(core_aten_exir_ep)
+
     if not edge_compile_config:
         edge_compile_config = exir.EdgeCompileConfig(
             _check_ir_validity=False,  # quant ops currently break ir verification
@@ -64,6 +71,8 @@ def _core_aten_to_edge(
     )
     if verbose:
         logging.info(f"Exported graph:\n{edge_manager.exported_program().graph}")
+        print("Tabular Graph:")
+        edge_manager.exported_program().graph.print_tabular()
     return edge_manager
 
 
@@ -75,12 +84,13 @@ def export_to_edge(
     edge_compile_config=_EDGE_COMPILE_CONFIG,
     strict=True,
     verbose=True,
+    remove_func_pass=False
 ) -> EdgeProgramManager:
     core_aten_ep = _to_core_aten(
         model, example_inputs, dynamic_shapes, strict=strict, verbose=verbose
     )
     return _core_aten_to_edge(
-        core_aten_ep, edge_constant_methods, edge_compile_config, verbose=verbose
+        core_aten_ep, edge_constant_methods, edge_compile_config, verbose=verbose, remove_func_pass=remove_func_pass,
     )
 
 

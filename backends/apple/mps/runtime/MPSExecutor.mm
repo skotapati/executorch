@@ -71,7 +71,7 @@ __ET_NODISCARD Error MPSExecutor::forward(std::vector<const Tensor*>& outputs) {
   static bool printed = false;
   Error err = Error::Ok;
   if (!printed) {
-    [_executable dump];
+    // [_executable dump];
     printed = true;
   }
   MPSStream* mpsStream = getDefaultMPSStream();

@@ -1,4 +1,4 @@
-/*
+examples/models/llama2/main.cpp examples/portable/utils.py/*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
@@ -14,6 +14,9 @@
 #include <executorch/backends/xnnpack/threadpool/cpuinfo_utils.h>
 #include <executorch/backends/xnnpack/threadpool/threadpool.h>
 #endif
+
+#include <chrono>
+#include <thread>
 
 DEFINE_string(
     model_path,
@@ -40,6 +43,9 @@ DEFINE_int32(
     "Number of CPU threads for inference. Defaults to -1, which implies we'll use a heuristic to derive the # of performant cores for a specific device.");
 
 int32_t main(int32_t argc, char** argv) {
+  printf("Sleeping for 5 seconds\n");
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
   // Create a loader to get the data of the program file. There are other

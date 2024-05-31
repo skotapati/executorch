@@ -54,7 +54,10 @@ class OpDequantizePerChannelGroupDefault(NodeVisitor):
         print(">>> Defining scales tensor")
         scales_id = self.define_tensor(get_input_node(node, 1), mps_graph)
         print(">>> Defining zero points tensor")
-        zero_points_id = self.define_tensor(get_input_node(node, 2), mps_graph, MPSDataType.mps_data_type_int4)
+        # there are no zero points in this quantization method (all is zeros)
+        # don't pack this data
+        # zero_points_id = self.define_tensor(get_input_node(node, 2), mps_graph, MPSDataType.mps_data_type_int4)
+        zero_points_id = -1
         quant_min = cast(int, node.args[3])
         quant_max = cast(int, node.args[4])
         dtype = self.torch_dtype_to_mps_dtype(node.args[5])

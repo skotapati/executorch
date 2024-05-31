@@ -1,4 +1,4 @@
-//
+examples/models/llama2/builder.py //
 //  Copyright (c) 2023 Apple Inc. All rights reserved.
 //  Provided subject to the LICENSE file in the top level directory.
 //
@@ -124,7 +124,7 @@ MPSGraphBuilder::compileMPSGraph() {
     [_targetTensors addObject: _idToMPSGraphTensor[out_id]];
   }
 
-  [_mpsGraph dump];
+  // [_mpsGraph dump];
 
   return err;
 }
