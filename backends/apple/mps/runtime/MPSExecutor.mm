@@ -35,8 +35,8 @@ MPSExecutor::MPSExecutor() {
     _use_shared_mem = false;
   }
 
-  _inputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc]  initWithCapacity:getNumInputs()] autorelease];
-  _outputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] initWithCapacity:getNumOutputs()] autorelease];
+  _inputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc]  initWithCapacity:getNumInputs()];
+  _outputsArray = [[NSMutableArray<MPSGraphTensorData *> alloc] initWithCapacity:getNumOutputs()];
 }
 
 __ET_NODISCARD Error
@@ -46,10 +46,11 @@ MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<
   // updateDataBuffers is a noop for devices with shared memory, it just gets the buffer GPU address
   // in case of devices with non-shared memory, it will blit the contents to a private GPU buffer.
   updateDataBuffers(inputs, outputs);
-  _inputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] init] autorelease];
-  _outputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] init] autorelease];
+  // _inputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] init] autorelease];
+  // _outputsArray = [[[NSMutableArray<MPSGraphTensorData *> alloc] init] autorelease];
   // if (!_inputsArray || [_inputsArray count] == 0) {
     // printf("initialize inputs array...?\n");
+
 #if !CAPTURE_MODEL
   for (int i = 0; i < inputs.size(); i++) {
 #else
@@ -59,6 +60,9 @@ MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<
     MPSGraphTensorData* tensorData = [[[MPSGraphTensorData alloc]initWithMTLBuffer:_inputGPUBuffers[i]
                                                                             shape:[_inputShapes[i] shape]
                                                                           dataType:[_inputShapes[i] dataType]] autorelease];
+    // if (_inputsArray[i]) {
+      // [_inputsArray[i] release];
+    // }
     _inputsArray[i] = tensorData;
   }
   // }
@@ -67,6 +71,9 @@ MPSExecutor::set_inputs_outputs(std::vector<const Tensor*>& inputs, std::vector<
     MPSGraphTensorData* tensorData = [[[MPSGraphTensorData alloc] initWithMTLBuffer:_outputGPUBuffers[i]
                                                                               shape:[_outputShapes[i] shape]
                                                                           dataType:[_outputShapes[i] dataType]] autorelease];
+    // if (_outputsArray[i]) {
+      // [_outputsArray[i] release];
+    // }
     _outputsArray[i] = tensorData;
   }
 
@@ -94,6 +101,7 @@ __ET_NODISCARD Error MPSExecutor::forward(std::vector<const Tensor*>& outputs) {
                     executionDescriptor:nil];
   }
   syncOutputBuffers(outputs);
+  // [inputsArray release];
 
   // On simulator, the buffers are synchronized during `syncOutputBuffer`
 #if !TARGET_OS_SIMULATOR
