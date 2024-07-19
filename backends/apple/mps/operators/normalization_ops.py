@@ -22,7 +22,7 @@ from executorch.exir.sym_util import eval_shape
 
 
 @register_node_visitor
-class BatchNorm(NodeVisitor):
+class BatchNormLegit(NodeVisitor):
     target = "aten._native_batch_norm_legit_no_training.default"
 
     def __init__(self, *args) -> None:
@@ -41,6 +41,44 @@ class BatchNorm(NodeVisitor):
         var_id = self.define_tensor(get_input_node(node, 4), mps_graph)
         momentum: float = get_scalar_val(node, 5)
         epsilon: float = get_scalar_val(node, 6)
+
+        output1_id, output2_id, output3_id = self.define_tensor_list(node, mps_graph)
+
+        mps_node = MPSNode(
+            mpsnode_union=MPSBatchNorm(
+                input_id=input_id,
+                mean_id=mean_id,
+                var_id=var_id,
+                weight_id=weight_id,
+                bias_id=bias_id,
+                momentum=momentum,
+                epsilon=epsilon,
+                output1_id=output1_id,
+                output2_id=output2_id,
+                output3_id=output3_id,
+            )
+        )
+        mps_graph.mps_nodes.append(mps_node)
+
+@register_node_visitor
+class BatchNorm(NodeVisitor):
+    target = "aten.batch_norm.default"
+
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+
+    def define_node(
+        self,
+        node: torch.fx.Node,
+        mps_graph: MPSGraph,
+    ) -> None:
+
+        input_id = self.define_tensor(get_input_node(node, 0), mps_graph)
+        weight_id = self.define_tensor(get_input_node(node, 1), mps_graph)
+        bias_id = self.define_tensor(get_input_node(node, 2), mps_graph)
+        mean_id = self.define_tensor(get_input_node(node, 3), mps_graph)
+        var_id = self.define_tensor(get_input_node(node, 4), mps_graph)
+        epsilon: float = get_scalar_val(node, 5)
 
         output1_id, output2_id, output3_id = self.define_tensor_list(node, mps_graph)
 
