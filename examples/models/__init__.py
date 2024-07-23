@@ -27,6 +27,7 @@ MODEL_NAME_TO_MODEL = {
     "resnet18": ("resnet", "ResNet18Model"),
     "resnet50": ("resnet", "ResNet50Model"),
     "llava": ("llava", "LlavaModel"),
+    "sd3": ("stable_diffusion_3", "StableDiffusion3Medium")
 }
 
 __all__ = [
