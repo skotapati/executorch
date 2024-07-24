@@ -90,6 +90,7 @@ __ET_NODISCARD Error MPSCompiler::compileModel(
 
 
 #if CAPTURE_MODEL
+/**
   std::unique_ptr<MPSGraphBuilder> mpsGraphBuilder(
     new MPSGraphBuilder(buffer_pointer, executor->_mpsGraphTensorToId));
   err = mpsGraphBuilder->compileModel();
@@ -101,21 +102,21 @@ __ET_NODISCARD Error MPSCompiler::compileModel(
       executor->_executable != nil,
       InvalidProgram,
       "Invalid FlatBuffer contents - could not create MPSGraphExecutable");
+*/
+  std::cout << ">> Writing executable to /tmp folder!!\n";
+  MPSGraphExecutableSerializationDescriptor *serializationDescriptor = [MPSGraphExecutableSerializationDescriptor new];
+  std::string dataFolder = "/tmp/";
 
-  // std::cout << ">> Writing executable to /tmp folder!!\n";
-  // MPSGraphExecutableSerializationDescriptor *serializationDescriptor = [MPSGraphExecutableSerializationDescriptor new];
-  // std::string dataFolder = "/tmp/";
+  std::string name = "mpsgraphmodule";
+  std::string mpsgraphpackagePath = dataFolder + name + ".mpsgraphpackage";
 
-  // std::string name = "mpsgraphmodule";
-  // std::string mpsgraphpackagePath = dataFolder + name + ".mpsgraphpackage";
+  NSString *mpsgraphpackageFileStr = [NSString stringWithUTF8String:mpsgraphpackagePath.c_str()];
+  NSURL *bundleURL = [NSURL fileURLWithPath:mpsgraphpackageFileStr];
 
-  // NSString *mpsgraphpackageFileStr = [NSString stringWithUTF8String:mpsgraphpackagePath.c_str()];
-  // NSURL *bundleURL = [NSURL fileURLWithPath:mpsgraphpackageFileStr];
+  serializationDescriptor.deploymentPlatform = MPSGraphDeploymentPlatformiOS;
+  serializationDescriptor.minimumDeploymentTarget = @"1.0.0";
 
-  // serializationDescriptor.deploymentPlatform = MPSGraphDeploymentPlatformiOS;
-  // serializationDescriptor.minimumDeploymentTarget = @"1.0.0";
-
-  // [executor->_executable serializeToMPSGraphPackageAtURL:bundleURL descriptor:serializationDescriptor];
+  [executor->_executable serializeToMPSGraphPackageAtURL:bundleURL descriptor:serializationDescriptor];
 #else
   executor->_executable = loadExecutable();
 #endif

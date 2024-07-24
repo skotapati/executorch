@@ -9,6 +9,7 @@ import argparse
 import copy
 import logging
 
+import diffusers.models.modeling_outputs
 import torch
 from examples.apple.mps.scripts.bench_utils import bench_torch, compare_outputs
 from executorch import exir
@@ -32,6 +33,9 @@ from executorch.sdk.bundled_program.serialize import (
 
 from ....models import MODEL_NAME_TO_MODEL
 from ....models.model_factory import EagerModelFactory
+
+from torch.export import register_dataclass
+
 
 FORMAT = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -150,6 +154,9 @@ if __name__ == "__main__":
 
     if args.model_name not in MODEL_NAME_TO_MODEL:
         raise RuntimeError(f"Available models are {list(MODEL_NAME_TO_MODEL.keys())}.")
+
+    # if args.model_name == "sd3":
+    #     register_dataclass(diffusers.models.modeling_outputs.Transformer2DModelOutput, serialized_type_name="sd3_output")
 
     model_config = get_model_config(args)
     model, example_inputs, _ = EagerModelFactory.create_model(**model_config)

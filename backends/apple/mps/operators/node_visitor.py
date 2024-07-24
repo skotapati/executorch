@@ -207,7 +207,7 @@ class NodeVisitor:
         assert isinstance(val, int) or isinstance(val, float)
 
         # MPS TODO: cache these values
-        hash = self.hash_tensor(val)
+        hash = val
 
         if hash in self.tensor_to_id:
             print(">>> !!Found hash")
