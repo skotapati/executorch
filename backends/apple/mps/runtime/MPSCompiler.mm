@@ -113,7 +113,7 @@ __ET_NODISCARD Error MPSCompiler::compileModel(
   NSString *mpsgraphpackageFileStr = [NSString stringWithUTF8String:mpsgraphpackagePath.c_str()];
   NSURL *bundleURL = [NSURL fileURLWithPath:mpsgraphpackageFileStr];
 
-  serializationDescriptor.deploymentPlatform = MPSGraphDeploymentPlatformiOS;
+  serializationDescriptor.deploymentPlatform = MPSGraphDeploymentPlatformIOS;
   serializationDescriptor.minimumDeploymentTarget = @"1.0.0";
 
   [executor->_executable serializeToMPSGraphPackageAtURL:bundleURL descriptor:serializationDescriptor];
