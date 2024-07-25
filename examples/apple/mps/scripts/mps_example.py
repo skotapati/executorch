@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
         executorch_program = edge.to_executorch(
             config=ExecutorchBackendConfig(
-                extract_delegate_segments=False, extract_constant_segment=False
+                extract_delegate_segments=True, extract_constant_segment=True
             )
         )
     else:
@@ -202,7 +202,7 @@ if __name__ == "__main__":
             edge_compile_config=exir.EdgeCompileConfig(_check_ir_validity=False),
         ).to_executorch(
             config=ExecutorchBackendConfig(
-                extract_delegate_segments=False, extract_constant_segment=False
+                extract_delegate_segments=True, extract_constant_segment=True
             )
         )
 
