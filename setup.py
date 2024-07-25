@@ -460,7 +460,7 @@ class CustomBuild(build):
             # useful error information to users.
             "-DEXECUTORCH_ENABLE_LOGGING=ON",
             "-DEXECUTORCH_LOG_LEVEL=Info",
-            "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
+            "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
             # The separate host project is only required when cross-compiling,
             # and it can cause build race conditions (libflatcc.a errors) when
             # enabled. TODO(dbort): Remove this override once this option is
